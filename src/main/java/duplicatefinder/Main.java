@@ -7,14 +7,14 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Runs the duplicate finder.
- */
+/** Runs the duplicate finder. */
 public class Main {
 
   public static class Args {
 
-    @Parameter(names = {"-d", "--directory"}, required = true)
+    @Parameter(
+        names = {"-d", "--directory"},
+        required = true)
     private List<String> directories = new ArrayList<>();
 
     @Parameter(names = "-debug", description = "Debug mode")
@@ -25,10 +25,18 @@ public class Main {
     Args args = new Args();
     JCommander.newBuilder().addObject(args).build().parse(argv);
 
-    DuplicateFinder duplicateFinder = new DuplicateFinder(FileSystems.getDefault(),
-        args.directories);
-    for (List<Path> duplicateGroup : duplicateFinder.getDuplicates()) {
-      System.out.println("Possible duplicates: " + duplicateGroup);
+    System.out.println("Searching " + args.directories + "...");
+
+    DuplicateFinder duplicateFinder =
+        new DuplicateFinder(FileSystems.getDefault(), args.directories);
+    List<List<Path>> duplicates = duplicateFinder.getDuplicates();
+    if (duplicates.isEmpty()) {
+      System.out.println("No duplicates found!");
+      return;
+    }
+
+    for (List<Path> duplicateGroup : duplicates) {
+      System.out.println("Found duplicates: " + duplicateGroup);
     }
   }
 }

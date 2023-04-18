@@ -8,7 +8,5 @@ import org.junit.runners.JUnit4;
 public class DuplicateFinderTest {
 
   @Test
-  public void test() {
-
-  }
+  public void test() {}
 }
