@@ -2,13 +2,18 @@ package duplicatefinder;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Entrypoint into the example project */
+/**
+ * Runs the duplicate finder.
+ */
 public class Main {
+
   public static class Args {
+
     @Parameter(names = {"-d", "--directory"}, required = true)
     private List<String> directories = new ArrayList<>();
 
@@ -20,9 +25,10 @@ public class Main {
     Args args = new Args();
     JCommander.newBuilder().addObject(args).build().parse(argv);
 
-    DuplicateFinder duplicateFinder = new DuplicateFinder(args.directories);
-    for (String duplicate : duplicateFinder.getDuplicates()) {
-      System.out.println(duplicate);
+    DuplicateFinder duplicateFinder = new DuplicateFinder(FileSystems.getDefault(),
+        args.directories);
+    for (List<Path> duplicateGroup : duplicateFinder.getDuplicates()) {
+      System.out.println("Possible duplicates: " + duplicateGroup);
     }
   }
 }
