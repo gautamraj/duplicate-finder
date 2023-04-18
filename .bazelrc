@@ -1,0 +1,6 @@
+# Enable bazel modules for dependency management. Remove in bazel 7
+common --enable_bzlmod
+
+# Parallelism settings
+build --jobs=4
+test --jobs=4
