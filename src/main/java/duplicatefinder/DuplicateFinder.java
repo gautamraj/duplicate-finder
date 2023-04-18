@@ -7,6 +7,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.hash.HashingInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,8 +16,11 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class DuplicateFinder {
+  private static final Logger log = LogManager.getLogger();
 
   // The "first N bytes" threshold. This should be a multiple of 512 bytes, the typical disk page
   // size. This should be large enough to detect duplicates, but not so large that it's expensive or
@@ -24,29 +28,36 @@ public class DuplicateFinder {
   public static final int FIRST_BYTES_THRESHOLD = 4096;
 
   private final FileSystem fileSystem;
-  private final List<String> directories;
 
-  public DuplicateFinder(FileSystem fileSystem, List<String> directories) {
+  public DuplicateFinder(FileSystem fileSystem) {
     this.fileSystem = fileSystem;
-    this.directories = directories;
   }
 
-  public List<List<Path>> getDuplicates() throws IOException {
+  /** Search the given directories and return all duplicates. */
+  public List<List<Path>> getDuplicates(List<String> directoriesToSearch) throws IOException {
     Map<Long, List<Path>> filesBySize = Maps.newHashMap();
-    for (String directory : directories) {
+    for (String directory : directoriesToSearch) {
       // Bucket by size
       Path path = fileSystem.getPath(directory);
       groupFilesBySize(path, filesBySize);
     }
+    log.debug("Found {} different sizes", filesBySize.size());
 
     // Remove any buckets with a single item - these cannot be duplicates.
     removeUnique(filesBySize);
+    log.debug("Found {} possible duplicates by size", filesBySize.size());
 
     // Take the existing size buckets and further split them out into buckets by first N bytes.
     List<List<Path>> filesByFirstBytes = furtherBucketByFirstNBytes(filesBySize);
+    log.debug(
+        "Found {} possible duplicates by first {} bytes",
+        FIRST_BYTES_THRESHOLD,
+        filesByFirstBytes.size());
 
     // Finally, group by the full contents.
-    return furtherBucketByContents(filesByFirstBytes);
+    List<List<Path>> bucketByContents = furtherBucketByContents(filesByFirstBytes);
+    log.debug("Found {} duplicates by contents", bucketByContents.size());
+    return bucketByContents;
   }
 
   /** Bucket files by their size. */
@@ -77,9 +88,9 @@ public class DuplicateFinder {
     List<List<Path>> duplicateGroups = Lists.newArrayList();
 
     for (List<Path> group : filesBySize.values()) {
-      Map<byte[], List<Path>> filesByFirstNBytes = Maps.newHashMap();
+      Map<ByteBuffer, List<Path>> filesByFirstNBytes = Maps.newHashMap();
       for (Path path : group) {
-        byte[] firstNBytes = getFirstNBytes(path);
+        ByteBuffer firstNBytes = getFirstNBytes(path);
         filesByFirstNBytes.computeIfAbsent(firstNBytes, k -> Lists.newArrayList()).add(path);
       }
       duplicateGroups.addAll(
@@ -106,9 +117,9 @@ public class DuplicateFinder {
   }
 
   /** Read the first N bytes. */
-  private static byte[] getFirstNBytes(Path path) {
+  private static ByteBuffer getFirstNBytes(Path path) {
     try (FileInputStream inputStream = new FileInputStream(path.toFile())) {
-      return inputStream.readNBytes(FIRST_BYTES_THRESHOLD);
+      return ByteBuffer.wrap(inputStream.readNBytes(FIRST_BYTES_THRESHOLD));
     } catch (IOException e) {
       // This could happen if files in the target directory change - give up if this happens.
       throw new IllegalStateException("Failed to read first bytes", e);
