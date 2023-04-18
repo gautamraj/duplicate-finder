@@ -1,5 +1,3 @@
-# WIP
-
 ## Overview
 
 A simple duplicate file finder that can be used for de-cluttering large directories of e.g. photos.
@@ -30,3 +28,6 @@ The goal is to minimize the number of expensive disk reads required. This algori
 performs best with many files of different sizes and contents, e.g. directories with photos. It
 performs worst in the degenerate case where all files are equivalent, and we need
 to read every byte of every file to determine that they are all the same.
+
+## Note
+This is just a toy project based on an interview question I used to ask, see https://github.com/adrianlopezroche/fdupes for a much more complete duplicate finder tool.
