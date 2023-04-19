@@ -9,5 +9,8 @@ junit4_test_suite(
     ]),
     deps = [
         "//src/main/java/duplicatefinder",
+        "@maven//:com_google_jimfs_jimfs",
+        "@maven//:org_apache_commons_commons_lang3",
+        "@maven//:org_assertj_assertj_core",
     ],
 )

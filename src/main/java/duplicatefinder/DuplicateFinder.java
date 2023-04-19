@@ -5,8 +5,8 @@ import com.google.common.collect.Maps;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import com.google.common.hash.HashingInputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -44,7 +44,7 @@ public class DuplicateFinder {
     log.debug("Found {} different sizes", filesBySize.size());
 
     // Remove any buckets with a single item - these cannot be duplicates.
-    removeUnique(filesBySize);
+    removeSingleEntries(filesBySize);
     log.debug("Found {} possible duplicates by size", filesBySize.size());
 
     // Take the existing size buckets and further split them out into buckets by first N bytes.
@@ -65,7 +65,7 @@ public class DuplicateFinder {
       throws IOException {
     try (Stream<Path> walk = Files.walk(path)) {
       Map<Long, List<Path>> curFilesBySize =
-          walk.filter(curPath -> curPath.toFile().isFile())
+          walk.filter(Files::isRegularFile)
               .collect(
                   Collectors.groupingBy(
                       // Group by filesize as the key.
@@ -79,7 +79,8 @@ public class DuplicateFinder {
                       // Maps to a list of all matching paths.
                       Collectors.mapping(Function.identity(), Collectors.toList())));
 
-      filesBySize.putAll(curFilesBySize);
+      curFilesBySize.forEach(
+          (k, v) -> filesBySize.computeIfAbsent(k, ignored -> Lists.newArrayList()).addAll(v));
     }
   }
 
@@ -118,7 +119,7 @@ public class DuplicateFinder {
 
   /** Read the first N bytes. */
   private static ByteBuffer getFirstNBytes(Path path) {
-    try (FileInputStream inputStream = new FileInputStream(path.toFile())) {
+    try (InputStream inputStream = Files.newInputStream(path)) {
       return ByteBuffer.wrap(inputStream.readNBytes(FIRST_BYTES_THRESHOLD));
     } catch (IOException e) {
       // This could happen if files in the target directory change - give up if this happens.
@@ -135,7 +136,7 @@ public class DuplicateFinder {
   }
 
   /** Remove Map entries that only have one element in their list (in-place). */
-  private static <K, V extends List<?>> void removeUnique(Map<K, V> map) {
+  private static <K, V extends List<?>> void removeSingleEntries(Map<K, V> map) {
     map.entrySet().removeIf(e -> e.getValue().size() == 1);
   }
 }

@@ -7,9 +7,12 @@ maven.install(
         "com.google.code.findbugs:jsr305:3.0.2",
         "com.google.googlejavaformat:google-java-format:1.16.0",
         "com.google.guava:guava:31.1-jre",
+        "com.google.jimfs:jimfs:1.2",
         "junit:junit:4.13",
+        "org.apache.commons:commons-lang3:jar:3.12.0",
         "org.apache.logging.log4j:log4j-core:jar:2.20.0",
         "org.apache.logging.log4j:log4j-slf4j-impl:jar:2.20.0",
+        "org.assertj:assertj-core:jar:3.24.2",
     ],
     repositories = [
         "https://maven.google.com",
